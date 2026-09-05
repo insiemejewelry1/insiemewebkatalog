@@ -31,7 +31,6 @@
         </div>
     </nav>
 
-    <!-- PRIJAVA -->
     <section id="scr-auth" class="auth-viewport">
         <h1 class="brand-logo">INSIEME</h1>
         <div id="box-login" class="auth-box">
@@ -49,13 +48,12 @@
             <input type="text" id="r-ph" class="minimal-input" placeholder="TELEFON">
             <input type="text" id="r-u" class="minimal-input" placeholder="KORISNIČKO IME">
             <input type="password" id="r-p" class="minimal-input" placeholder="LOZINKA">
-            <button onclick="doReg()" class="btn-minimal">POŠALJI ZAHTEV</button>
+            <button onclick="doReg()" class="btn-minimal">POŠALJITE ZAHTEV</button>
             <a href="javascript:void(0)" class="auth-toggle" onclick="swAuth(false)">NAZAD</a>
         </div>
         <p id="auth-err" class="error-msg"></p>
     </section>
 
-    <!-- KATALOG -->
     <section id="scr-cat" class="screen" style="display:none;">
         <div class="main-container">
             <div class="filter-row">
@@ -73,29 +71,40 @@
         </div>
     </section>
 
-    <!-- DETALJI -->
     <section id="scr-det" class="screen" style="display:none;">
         <div class="header-back" onclick="navigateTo('cat')">← DETALJI MODELA</div>
         <div id="det-body" class="detail-view"></div>
     </section>
 
-    <!-- DOSTAVA -->
     <section id="scr-ord" class="screen" style="display:none;">
         <div class="header-back" onclick="navigateTo('cat')">← DOSTAVA</div>
         <div class="main-container" style="max-width:400px;">
             <input type="text" id="on" class="minimal-input" placeholder="IME I PREZIME">
-            <input type="text" id="op" class="minimal-input" placeholder="TELEFON">
-            <input type="text" id="oa" class="minimal-input" placeholder="ADRESA I GRAD">
+            <input type="tel" id="op" class="minimal-input" placeholder="BROJ TELEFONA" inputmode="numeric" autocomplete="tel" maxlength="15" oninput="this.value=this.value.replace(/[^0-9]/g, '')">
+            <input type="email" id="oe" class="minimal-input" placeholder="EMAIL ADRESA" autocomplete="email">
+            <input type="text" id="oa" class="minimal-input" placeholder="ADRESA (ULICA I BROJ)" autocomplete="street-address">
+            <div class="order-address-row">
+                <input type="text" id="ocity" class="minimal-input" placeholder="GRAD" autocomplete="address-level2">
+                <input type="text" id="opostal" class="minimal-input" placeholder="POŠTANSKI BROJ" inputmode="numeric" maxlength="10" oninput="this.value=this.value.replace(/[^0-9]/g, '')" autocomplete="postal-code">
+            </div>
+            <div class="payment-section">
+                <h3>NAČIN PLAĆANJA KURIRU:</h3>
+                <label class="payment-option"><input type="radio" name="payment-method" value="Gotovinski"><span>Gotovinski</span></label>
+                <label class="payment-option"><input type="radio" name="payment-method" value="Karticom"><span>Karticom</span></label>
+            </div>
+            <label class="invoice-check">
+                <input type="checkbox" id="request-invoice">
+                <span>FAKTURA</span>
+            </label>
+            <div id="order-summary" class="order-summary"></div>
             <button onclick="finishOrder()" class="btn-minimal">POTVRDI</button>
         </div>
     </section>
 
-    <!-- ADMIN PANEL -->
     <section id="scr-adm" class="screen" style="display:none;">
         <div class="header-back" onclick="navigateTo('cat')">← ADMIN PANEL</div>
         <div class="admin-main">
             
-            <!-- 1. DODAVANJE (NA POČETKU) -->
             <div class="admin-card">
                 <h3 class="section-title">Dodaj Novi Proizvod</h3>
                 <input type="text" id="a-id" class="m3-input" placeholder="ID/Ime Nakita">
@@ -133,7 +142,6 @@
                 <button onclick="resetAdminForm()" id="btn-can" class="btn-cancel" style="display:none;">ODUSTANI</button>
             </div>
 
-            <!-- 2. OBAVEŠTENJE -->
             <div class="admin-card">
                 <h3 class="section-title">Pošaljite novo obaveštenje</h3>
                 <p class="label-small">Ovo obaveštenje će se pojaviti svim kupcima na vrhu aplikacije.</p>
@@ -143,13 +151,13 @@
                 <p class="red-text" style="cursor:pointer; text-align:center; margin-top:20px;" onclick="handleClearAnn()">🗑 Uklonite trenutno obaveštenje</p>
             </div>
 
-            <!-- 3. KORISNICI -->
+
             <div class="admin-card">
                 <h3 class="section-title">Korisnici na čekanju (<span id="req-count">0</span>)</h3>
                 <div id="req-list-ui"></div>
             </div>
 
-            <!-- 4. LISTA PROIZVODA (NA KRAJU) -->
+
             <div class="admin-card">
                 <h3 class="section-title">Upravljajte Proizvodima</h3>
                 <div id="admin-list-ui"></div>
@@ -158,7 +166,6 @@
         </div>
     </section>
 
-    <!-- KORPA -->
     <div id="m-cart" class="modal-overlay">
         <div class="modal-box">
             <span class="close-x" onclick="handleHideM('m-cart')">×</span>
