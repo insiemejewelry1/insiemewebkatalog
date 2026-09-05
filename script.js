@@ -115,7 +115,7 @@ function drawGrid() {
 
 function openDet(id) {
     const p = products.find(x => x.fs_id === id); activeP = p;
-    const pdf = p.colorChart ? `<button onclick="viewPdf('${p.colorChart}')" class="btn-minimal" style="width:auto; padding:10px 20px; background:#f5f5f5; color:#000; margin-top:20px; border-radius:10px;">🎨 KATALOG BOJA</button>` : "";
+    const pdf = p.colorChart ? `<button onclick="viewPdf('${p.fs_id}')" class="btn-minimal" style="width:auto; padding:10px 20px; background:#f5f5f5; color:#000; margin-top:20px; border-radius:10px;">KATALOG BOJA</button>` : "";
     const cols = p.availableColors?.length ? `<div style="margin:30px 0; text-align:left;"><p style="font-size:0.7rem; font-weight:800; margin-bottom:10px; letter-spacing:1px;">ODABERITE BOJU</p><select id="p-sel-c" class="minimal-select" style="width:100%;">${p.availableColors.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>` : "";
     
     document.getElementById('det-body').innerHTML = `
@@ -133,6 +133,24 @@ function openDet(id) {
 }
 
 function zoomIn(src) { document.getElementById('zoom-target').src = src; document.getElementById('zoom-overlay').style.display = 'flex'; }
+
+function viewPdf(productId) {
+    const product = products.find(item => item.fs_id === productId);
+    if (!product || !product.colorChart) return alert("KATALOG BOJA NIJE DOSTUPAN.");
+    try {
+        const base64 = product.colorChart.split(',')[1] || product.colorChart;
+        const binary = atob(base64);
+        const bytes = Uint8Array.from(binary, char => char.charCodeAt(0));
+        let pdfBytes = bytes;
+        if (bytes[0] === 0x1f && bytes[1] === 0x8b) pdfBytes = pako.ungzip(bytes);
+        const pdfUrl = URL.createObjectURL(new Blob([pdfBytes], { type: 'application/pdf' }));
+        const pdfWindow = window.open(pdfUrl, '_blank');
+        if (!pdfWindow) window.location.href = pdfUrl;
+        setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000);
+    } catch (error) {
+        alert("KATALOG BOJA NE MOŽE DA SE OTVORI.");
+    }
+}
 
 function addCart() {
     const c = document.getElementById('p-sel-c') ? document.getElementById('p-sel-c').value : "Standard";
@@ -221,12 +239,19 @@ async function saveProduct() {
     const id=document.getElementById('a-id').value, pr=document.getElementById('a-pr').value, img=document.getElementById('a-img').files[0], pdf=document.getElementById('a-pdf').files[0];
     if(!id || !pr) return alert("OBAVEZNA POLJA!");
     const btn = document.getElementById('btn-sv'); btn.disabled = true;
-    let obj = { id, price: parseFloat(pr), description: document.getElementById('a-ds').value, category: document.getElementById('a-ct').value, collection: document.getElementById('a-cl').value, availableColors: selectedColors, tajniKljuc: SECRET };
-    if(img) obj.image = await toB64(img);
-    if(pdf) { const b = new Uint8Array(await pdf.arrayBuffer()), c = pako.gzip(b); obj.colorChart = "data:application/pdf;base64," + btoa(String.fromCharCode(...c)); }
-    if(editId) await db.collection('products').doc(editId).update(obj);
-    else await db.collection('products').add(obj);
-    alert("SAČUVANO."); resetAdminForm(); btn.disabled = false;
+    try {
+        let obj = { id, price: parseFloat(pr), description: document.getElementById('a-ds').value, category: document.getElementById('a-ct').value, collection: document.getElementById('a-cl').value, availableColors: selectedColors, tajniKljuc: SECRET };
+        if(img) obj.image = await toB64(img);
+        if(pdf) obj.colorChart = await toCompressedPdfB64(pdf);
+        if(editId) await db.collection('products').doc(editId).update(obj);
+        else await db.collection('products').add(obj);
+        alert("SAČUVANO."); resetAdminForm();
+    } catch (error) {
+        console.error(error);
+        alert("PROIZVOD NIJE SAČUVAN. PDF JE MOŽDA PREVELIK.");
+    } finally {
+        btn.disabled = false;
+    }
 }
 
 function drawAdminList() {
@@ -293,4 +318,14 @@ function doLogout() { localStorage.removeItem('pingvin_session_v14'); location.r
 function handleHideM(id) { document.getElementById(id).style.display = 'none'; }
 function zoomIn(src) { document.getElementById('zoom-target').src = src; document.getElementById('zoom-overlay').style.display = 'flex'; }
 function swAuth(is) { document.getElementById('box-login').style.display = is ? 'none' : 'block'; document.getElementById('box-reg').style.display = is ? 'block' : 'none'; }
-function toB64(f) { return new Promise((res) => { const r = new FileReader(); r.readAsDataURL(f); r.onload = () => res(r.result); }); }
+function toB64(f) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(f); }); }
+async function toCompressedPdfB64(file) {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const compressed = pako.gzip(bytes);
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let index = 0; index < compressed.length; index += chunkSize) {
+        binary += String.fromCharCode(...compressed.subarray(index, index + chunkSize));
+    }
+    return "data:application/gzip;base64," + btoa(binary);
+}
