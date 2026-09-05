@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>INSIEME JEWELRY</title>
     <link rel="icon" type="image/x-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAk1BMVEX///////3g4OCoqKjU1NS8vLzy8vLa2trj5N/3+PPn5+f29vWRjY0WDxAgHBpwbWxlY2IIAQAXFBKAfnx1dHJRT018d3cqJyfPz8+ysK0uLSsAAAA3MzEWEA+JhYRGQ0KWlJIfGhX9/f8gGhoTBAcQCAApJSIaDxEUEgqKiIjGxsZdWVdcWFmlpKSYlpcLDAdCPTqueouWAAABOElEQVR4AWIYlICRkZGQCmyaAN1SBZIDIRCcQrMK64rEs0T//7qL677guihtA2YAEMaEUMT4xJv4wafszPthFAuZpFleRKKsiho+ioKm7WTWq1i3SleJ0X1nvfcE0SlbJFOVmSittErjUnYFmb0UuFN5n86Vns/nC62iZRdOk1XwEsxkYoSaR6Jaz9dhL4QIzbKBN/BNMqTzqDRJXGDrOJpgC7P3l9tuKyMld0WmKQt8F7jgXQDAjMqUkvvDhUNQ+zV8wXW5iQdEGAWg4CPy85eiz7c1Dc7m82HkJwH84xAG3AFQFpxrHPxgXxwOyHf+jIJjv4IZBEUWhw1yiDm/HkuAWhhxstTVvHa0gRGEQhgt901z5kcF/iBkllHmBqtHBcB1PtDzIrBDOy6AunG3D0YIxnGm/yX+AKdHGkfQQP6tAAAAAElFTkSuQmCC">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;300;400;600&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@200;400;600;700;800&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -25,12 +25,13 @@
             <a href="javascript:void(0)" class="nav-logo" onclick="navigateTo('cat')">INSIEME</a>
             <div class="nav-right">
                 <span id="adm-btn" onclick="navigateTo('adm')" style="display:none;">ADMIN</span>
-                <span onclick="openCart()">KORPA (<span id="cart-num">0</span>)</span>
+                <span onclick="handleOpenCart()">KORPA (<span id="cart-num">0</span>)</span>
                 <span onclick="doLogout()">IZLAZ</span>
             </div>
         </div>
     </nav>
 
+    <!-- PRIJAVA -->
     <section id="scr-auth" class="auth-viewport">
         <h1 class="brand-logo">INSIEME</h1>
         <div id="box-login" class="auth-box">
@@ -41,112 +42,130 @@
                 <label for="rem-check">ZAPAMTI ME</label>
             </div>
             <button onclick="doLogin()" class="btn-minimal">PRIJAVITE SE</button>
-            <a href="javascript:void(0)" class="auth-toggle" onclick="swAuth(true)">POŠALJITE ZAHTEV ZA PRISTUP</a>
+            <a href="javascript:void(0)" class="auth-toggle" onclick="swAuth(true)">ZAHTEV ZA PRISTUP</a>
         </div>
         <div id="box-reg" class="auth-box" style="display:none;">
-            <input type="text" id="r-n" class="minimal-input" placeholder="IME FIRME / IME I PREZIME">
-            <input type="text" id="r-ph" class="minimal-input" placeholder="BROJ TELEFONA">
+            <input type="text" id="r-n" class="minimal-input" placeholder="IME FIRME / IME">
+            <input type="text" id="r-ph" class="minimal-input" placeholder="TELEFON">
             <input type="text" id="r-u" class="minimal-input" placeholder="KORISNIČKO IME">
             <input type="password" id="r-p" class="minimal-input" placeholder="LOZINKA">
             <button onclick="doReg()" class="btn-minimal">POŠALJI ZAHTEV</button>
-            <a href="javascript:void(0)" class="auth-toggle" onclick="swAuth(false)">POVRATAK NA PRIJAVU</a>
+            <a href="javascript:void(0)" class="auth-toggle" onclick="swAuth(false)">NAZAD</a>
         </div>
         <p id="auth-err" class="error-msg"></p>
     </section>
 
+    <!-- KATALOG -->
     <section id="scr-cat" class="screen" style="display:none;">
         <div class="main-container">
             <div class="filter-row">
                 <select id="f-coll" class="minimal-select" onchange="drawGrid()">
                     <option value="">KOLEKCIJA</option>
-                    <option value="IM">KOLEKCIJA IM</option>
-                    <option value="IS">KOLEKCIJA IS</option>
-                    <option value="IE">KOLEKCIJA IE</option>
+                    <option value="IM">IM</option><option value="IS">IS</option><option value="IE">IE</option>
                 </select>
                 <select id="f-cat" class="minimal-select" onchange="drawGrid()">
-                    <option value="">SVI MODELI</option>
-                    <option value="Minđuše">MINĐUŠE</option>
-                    <option value="Narukvice">NARUKVICE</option>
-                    <option value="Ogrlice">OGRLICE</option>
-                    <option value="Prstenje">PRSTENJE</option>
-                    <option value="Privesci">PRIVESCI</option>
+                    <option value="">TIP NAKITA</option>
+                    <option value="Minđuše">MINĐUŠE</option><option value="Narukvice">NARUKVICE</option>
+                    <option value="Ogrlice">OGRLICE</option><option value="Prstenje">PRSTENJE</option>
                 </select>
             </div>
             <div id="grid-ui" class="product-grid"></div>
         </div>
     </section>
 
+    <!-- DETALJI -->
     <section id="scr-det" class="screen" style="display:none;">
-        <div class="back-nav" onclick="navigateTo('cat')">← NAZAD</div>
+        <div class="header-back" onclick="navigateTo('cat')">← DETALJI MODELA</div>
         <div id="det-body" class="detail-view"></div>
     </section>
 
+    <!-- DOSTAVA -->
     <section id="scr-ord" class="screen" style="display:none;">
-        <div class="back-nav" onclick="navigateTo('cat')">← NAZAD</div>
-        <div class="order-form">
+        <div class="header-back" onclick="navigateTo('cat')">← DOSTAVA</div>
+        <div class="main-container" style="max-width:400px;">
             <input type="text" id="on" class="minimal-input" placeholder="IME I PREZIME">
             <input type="text" id="op" class="minimal-input" placeholder="TELEFON">
-            <input type="text" id="oe" class="minimal-input" placeholder="EMAIL">
             <input type="text" id="oa" class="minimal-input" placeholder="ADRESA I GRAD">
-            <button onclick="finishOrder()" class="btn-minimal">POTVRDI PORUDŽBINU</button>
+            <button onclick="finishOrder()" class="btn-minimal">POTVRDI</button>
         </div>
     </section>
 
+    <!-- ADMIN PANEL -->
     <section id="scr-adm" class="screen" style="display:none;">
-        <div class="admin-layout">
-            <aside class="admin-sidebar">
-                <button class="side-btn active" id="b-p" onclick="switchTab('p')">PROIZVODI</button>
-                <button class="side-btn" id="b-u" onclick="switchTab('u')">KORISNICI</button>
-                <button class="side-btn" id="b-a" onclick="switchTab('a')">INFO</button>
-                <button class="side-btn back-to-site" onclick="navigateTo('cat')">← NAZAD</button>
-            </aside>
-            <main class="admin-main">
-                <div id="area-p">
-                    <div class="admin-card">
-                        <h3 id="form-title">NOVI PROIZVOD</h3>
-                        <input type="text" id="a-id" class="minimal-input" placeholder="ŠIFRA MODELA">
-                        <input type="number" id="a-pr" class="minimal-input" placeholder="CENA">
-                        <div class="row-flex">
-                            <select id="a-ct" class="minimal-select"><option value="Minđuše">Minđuše</option><option value="Narukvice">Narukvice</option><option value="Ogrlice">Ogrlice</option><option value="Prstenje">Prstenje</option><option value="Privesci">Privesci</option></select>
-                            <select id="a-cl" class="minimal-select"><option value="IM">IM</option><option value="IS">IS</option><option value="IE">IE</option></select>
-                        </div>
-                        <textarea id="a-ds" class="minimal-input" style="height:100px; margin-top:15px;" placeholder="OPIS..."></textarea>
-                        
-                        <div class="admin-colors">
-                            <p class="label-small">BOJE (SELEKTUJ ILI DODAJ):</p>
-                            <div id="color-chips-ui"></div>
-                            <div class="input-inline">
-                                <input type="text" id="new-color-text" placeholder="NOVA BOJA...">
-                                <button onclick="addNewColor()" class="btn-small-black">DODAJ</button>
-                            </div>
-                        </div>
+        <div class="header-back" onclick="navigateTo('cat')">← ADMIN PANEL</div>
+        <div class="admin-main">
+            
+            <!-- 1. DODAVANJE (NA POČETKU) -->
+            <div class="admin-card">
+                <h3 class="section-title">Dodaj Novi Proizvod</h3>
+                <input type="text" id="a-id" class="m3-input" placeholder="ID/Ime Nakita">
+                <input type="number" id="a-pr" class="m3-input" placeholder="Cena (din)">
+                
+                <p class="label-small">Glavna slika:</p>
+                <div class="file-picker" onclick="document.getElementById('a-img').click()">
+                    <div id="img-preview-box">🖼</div>
+                    <span id="img-label">Odaberite glavnu sliku</span>
+                    <input type="file" id="a-img" accept="image/*" style="display:none;" onchange="previewImage(this)">
+                </div>
 
-                        <div class="file-inputs">
-                            <label>SLIKA:</label><input type="file" id="a-img" accept="image/*">
-                            <label>PDF:</label><input type="file" id="a-pdf" accept="application/pdf">
-                        </div>
-                        
-                        <button onclick="saveProduct()" id="btn-sv" class="btn-minimal">SAČUVAJ</button>
-                        <button onclick="resetAdminForm()" id="btn-can" class="btn-cancel" style="display:none;">ODUSTANI OD IZMENE</button>
+                <p class="label-small">Katalog boja (PDF format):</p>
+                <div class="file-picker" onclick="document.getElementById('a-pdf').click()">
+                    <span>📄</span>
+                    <span id="pdf-label">Odaberite PDF katalog</span>
+                    <input type="file" id="a-pdf" accept="application/pdf" style="display:none;" onchange="previewPdfName(this)">
+                </div>
+
+                <select id="a-ct" class="m3-input"><option value="Minđuše">Minđuše</option><option value="Narukvice">Narukvice</option><option value="Ogrlice">Ogrlice</option><option value="Prstenje">Prstenje</option></select>
+                <select id="a-cl" class="m3-input"><option value="IM">IM</option><option value="IS">IS</option><option value="IE">IE</option></select>
+                
+                <div class="color-section">
+                    <p class="label-small">Dostupne boje:</p>
+                    <div class="input-inline">
+                        <input type="text" id="new-color-text" placeholder="Dodajte novu boju">
+                        <button onclick="addNewColor()">+</button>
                     </div>
-                    <div id="admin-list-ui"></div>
+                    <div id="color-chips-ui"></div>
                 </div>
-                <div id="area-u" style="display:none;"><div id="req-list-ui"></div></div>
-                <div id="area-a" style="display:none;">
-                    <textarea id="an-b" class="minimal-input" placeholder="TEKST BANERA..."></textarea>
-                    <button onclick="setAnn()" class="btn-minimal">OBJAVI</button>
-                </div>
-            </main>
+
+                <textarea id="a-ds" class="m3-input" style="height:100px;" placeholder="Opis"></textarea>
+                
+                <button onclick="saveProduct()" id="btn-sv" class="btn-save">Sačuvajte Proizvod</button>
+                <button onclick="resetAdminForm()" id="btn-can" class="btn-cancel" style="display:none;">ODUSTANI</button>
+            </div>
+
+            <!-- 2. OBAVEŠTENJE -->
+            <div class="admin-card">
+                <h3 class="section-title">Pošaljite novo obaveštenje</h3>
+                <p class="label-small">Ovo obaveštenje će se pojaviti svim kupcima na vrhu aplikacije.</p>
+                <input type="text" id="an-t" class="m3-input" placeholder="Naslov">
+                <textarea id="an-b" class="m3-input" placeholder="Tekst obaveštenja" style="height:100px;"></textarea>
+                <button onclick="setAnn()" class="btn-announce">Objavite obaveštenje</button>
+                <p class="red-text" style="cursor:pointer; text-align:center; margin-top:20px;" onclick="handleClearAnn()">🗑 Uklonite trenutno obaveštenje</p>
+            </div>
+
+            <!-- 3. KORISNICI -->
+            <div class="admin-card">
+                <h3 class="section-title">Korisnici na čekanju (<span id="req-count">0</span>)</h3>
+                <div id="req-list-ui"></div>
+            </div>
+
+            <!-- 4. LISTA PROIZVODA (NA KRAJU) -->
+            <div class="admin-card">
+                <h3 class="section-title">Upravljajte Proizvodima</h3>
+                <div id="admin-list-ui"></div>
+            </div>
+
         </div>
     </section>
 
+    <!-- KORPA -->
     <div id="m-cart" class="modal-overlay">
         <div class="modal-box">
             <span class="close-x" onclick="handleHideM('m-cart')">×</span>
-            <h2>VAŠA KORPA</h2>
-            <div id="c-list"></div>
+            <h2 class="section-title">VAŠA KORPA</h2>
+            <div id="c-list" class="cart-list"></div>
             <div class="cart-total">UKUPNO: <span id="c-tot">0</span> DIN</div>
-            <button onclick="goToOrder()" class="btn-minimal">DALJE</button>
+            <button onclick="goToOrder()" class="btn-minimal">PORUČITE</button>
         </div>
     </div>
 
