@@ -108,8 +108,8 @@ function drawGrid() {
     list.sort((a,b) => a.id.toString().localeCompare(b.id.toString()));
     grid.innerHTML = list.map(p => `
         <div class="p-card" onclick="openDet('${p.fs_id}')">
-            <img src="${p.image}">
-            <div class="p-info"><h3>${p.id}</h3><p style="color:#C63D13;"><strong>${Number(p.price).toLocaleString()} DIN</strong></p></div>
+            <img src="${p.image}" alt="${p.id}" loading="lazy" decoding="async">
+            <div class="p-info"><h3>${p.id}</h3><p style="color:#C63D13;"><strong>${Number(p.price).toLocaleString()} DIN</strong></p><small>${p.category || ''} ${p.collection ? '· ' + p.collection : ''}</small></div>
         </div>`).join('');
 }
 
@@ -119,7 +119,7 @@ function openDet(id) {
     const cols = p.availableColors?.length ? `<div style="margin:30px 0; text-align:left;"><p style="font-size:0.7rem; font-weight:800; margin-bottom:10px; letter-spacing:1px;">ODABERITE BOJU</p><select id="p-sel-c" class="minimal-select" style="width:100%;">${p.availableColors.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>` : "";
     
     document.getElementById('det-body').innerHTML = `
-        <img src="${p.image}" class="detail-image" onclick="zoomIn('${p.image}')">
+        <img src="${p.image}" class="detail-image" alt="${p.id}" decoding="async" onclick="zoomIn('${p.image}')">
         <h1 class="detail-title">${p.id}</h1>
         <p class="detail-price">${Number(p.price).toLocaleString()} DIN</p>
         <div style="max-width:320px; margin:auto;">
@@ -146,7 +146,7 @@ function handleOpenCart() {
     document.getElementById('c-list').innerHTML = cart.map((i, idx) => {
         tot += i.price;
         return `<div class="cart-item">
-            <img src="${i.image}">
+            <img src="${i.image}" alt="${i.id}" loading="lazy" decoding="async">
             <div style="flex:1;"><strong>${i.id}</strong><br><small>Boja: ${i.selC}</small></div>
             <div>${i.price.toLocaleString()} din <span onclick="remC(${idx})" style="color:red; font-weight:800; cursor:pointer; margin-left:15px; font-size:1.5rem;">×</span></div>
         </div>`;
@@ -157,18 +157,54 @@ function handleOpenCart() {
 
 function remC(i) { cart.splice(i,1); handleOpenCart(); document.getElementById('cart-num').innerText = cart.length; }
 
-function goToOrder() { if(cart.length===0) return; handleHideM('m-cart'); navigateTo('ord'); }
+function goToOrder() {
+    if(cart.length===0) return;
+    handleHideM('m-cart');
+    renderOrderSummary();
+    navigateTo('ord');
+}
+
+function renderOrderSummary() {
+    let total = 0;
+    document.getElementById('order-summary').innerHTML = cart.map(item => {
+        const price = Number(item.price) || 0;
+        total += price;
+        return `<div class="order-summary-item">
+            <img src="${item.image}" alt="${item.id}">
+            <div><strong>${item.id}</strong><small>Kolekcija: ${item.collection || '-'}<br>Tip: ${item.category || '-'}<br>Boja: ${item.selC}</small></div>
+            <strong>${price.toLocaleString()} din</strong>
+        </div>`;
+    }).join('') + `<div class="order-summary-total">UKUPNO: ${total.toLocaleString()} DIN</div>`;
+}
 
 async function finishOrder() {
-    const n=document.getElementById('on').value, ph=document.getElementById('op').value, ad=document.getElementById('oa').value;
-    if(!n || !ph || !ad) return alert("POPUNITE POLJA.");
-    const items = cart.map(i => `- ${i.id} (${i.selC})`).join('\n'), tot = document.getElementById('c-tot').innerText + " DIN";
-    const body = encodeURIComponent(`NARUDŽBINA:\nIme: ${n}\nTel: ${ph}\nAdresa: ${ad}\n\nPROIZVODI:\n${items}\n\nUKUPNO: ${tot}`);
+    const n = document.getElementById('on').value.trim();
+    const ph = document.getElementById('op').value.trim();
+    const email = document.getElementById('oe').value.trim();
+    const street = document.getElementById('oa').value.trim();
+    const city = document.getElementById('ocity').value.trim();
+    const postal = document.getElementById('opostal').value.trim();
+    const payment = document.querySelector('input[name="payment-method"]:checked');
+    if(!n || !ph || !email || !street || !city || !postal || !payment) return alert("POPUNITE SVA POLJA I IZABERITE NAČIN PLAĆANJA.");
+    if(!/^\d{6,15}$/.test(ph)) return alert("BROJ TELEFONA MOŽE SADRŽATI SAMO CIFRE (6-15 CIFARA).");
+    if(!/^\d{4,10}$/.test(postal)) return alert("POŠTANSKI BROJ MOŽE SADRŽATI SAMO CIFRE.");
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert("UNESITE ISPRAVNU EMAIL ADRESU.");
+    const invoiceRequested = document.getElementById('request-invoice').checked;
+    const total = cart.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    const items = cart.map(i => [
+        `- ${i.id}`,
+        `  Kolekcija: ${i.collection || '-'}`,
+        `  Tip nakita: ${i.category || '-'}`,
+        `  Boja: ${i.selC || 'Standard'}`,
+        `  Cena: ${(Number(i.price) || 0).toLocaleString()} DIN`,
+        `  Opis: ${i.description || 'Nema opisa.'}`
+    ].join('\n')).join('\n\n');
+    const body = encodeURIComponent(`NARUDŽBINA:\nIme i prezime: ${n}\nTelefon: ${ph}\nEmail: ${email}\nAdresa: ${street}\nGrad: ${city}\nPoštanski broj: ${postal}\nNačin plaćanja: ${payment.value}\nFaktura: ${invoiceRequested ? 'DA' : 'NE'}\n\nPROIZVODI:\n${items}\n\nUKUPNO: ${total.toLocaleString()} DIN`);
     window.location.href = `mailto:porudzbine.zlatarapingvin@gmail.com?subject=Nova Porudžbina&body=${body}`;
     cart = []; document.getElementById('cart-num').innerText = "0"; navigateTo('cat');
 }
 
-// ADMIN PREVIEW
+
 function previewImage(input) {
     if (input.files && input.files[0]) {
         const reader = new FileReader();
@@ -196,7 +232,7 @@ async function saveProduct() {
 function drawAdminList() {
     document.getElementById('admin-list-ui').innerHTML = products.map(p => `
         <div class="admin-list-item">
-            <div style="display:flex; align-items:center;"><img src="${p.image}"><div><strong>${p.id}</strong><br><small>${p.price} din</small></div></div>
+            <div style="display:flex; align-items:center;"><img src="${p.image}" alt="${p.id}" loading="lazy" decoding="async"><div><strong>${p.id}</strong><br><small>${p.price} din</small></div></div>
             <div>
                 <span class="icon-action" style="color:blue;" onclick="startEdit('${p.fs_id}')">✎</span>
                 <span class="icon-action" style="color:red;" onclick="delP('${p.fs_id}')">🗑</span>
