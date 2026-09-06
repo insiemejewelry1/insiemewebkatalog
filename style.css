@@ -52,6 +52,8 @@ nav { padding: 15px 25px; border-bottom: 1px solid #EEE; position: sticky; top: 
 .detail-title { font-weight: 800; font-size: 1.6rem; margin-bottom: 10px; }
 .detail-price { color: var(--orange); font-weight: 800; font-size: 1.4rem; margin-bottom: 30px; }
 .btn-add-cart-fixed { display: block; width: min(100%, 520px); margin: 40px auto 0; padding: 20px; background: #000; color: #FFF; border: none; font-weight: 800; font-size: 0.9rem; letter-spacing: 2px; cursor: pointer; text-transform: uppercase; }
+.quantity-control { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 28px; font-size: 0.75rem; font-weight: 800; letter-spacing: 1px; }
+.quantity-control input, .cart-quantity input { width: 70px; padding: 10px; border: 1px solid #DDD; border-radius: 5px; font-size: 0.9rem; }
 
 .admin-main { padding: 20px; background: #FFF; max-width: 600px; margin: auto; }
 .admin-card { background: #FFF; padding: 20px 0; margin-bottom: 40px; }
@@ -73,6 +75,7 @@ nav { padding: 15px 25px; border-bottom: 1px solid #EEE; position: sticky; top: 
 .cart-list { margin: 20px 0; max-height: 400px; overflow-y: auto; }
 .cart-item { display: flex; align-items: center; gap: 15px; padding: 15px 0; border-bottom: 1px solid #EEE; }
 .cart-item img { width: 60px; height: 60px; object-fit: contain; background: #FAFAFA; border-radius: 10px; }
+.cart-quantity { display: inline-flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.75rem; font-weight: 600; }
 .cart-total { text-align: right; font-weight: 800; font-size: 1.3rem; margin: 20px 0; }
 
 
