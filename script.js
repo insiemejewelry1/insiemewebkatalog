@@ -12,24 +12,59 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 const SECRET = "ZlataraMojaSifra123";
+const ADMIN_EMAIL = "porudzbine.zlatarapingvin@gmail.com";
 
-let products = [], cart = [], selectedColors = [], globalColors = [], userRole = "guest", sessionUser = null, activeP = null, editId = null;
+let products = [], cart = [], selectedColors = [], globalColors = [], userRole = "guest", sessionUser = null, activeP = null, editId = null, authReady = false;
 
 window.onload = () => {
-    const saved = localStorage.getItem('pingvin_session_v14');
-    if (saved) {
-        const d = JSON.parse(saved);
-        userRole = d.role; sessionUser = d.user;
-        if (userRole === "admin") document.getElementById('adm-btn').style.display = "inline-block";
-        startApp();
-    }
+    auth.onAuthStateChanged(firebaseUser => {
+        authReady = true;
+        const saved = localStorage.getItem('pingvin_session_v14');
+        const d = saved ? JSON.parse(saved) : null;
+        const isFirebaseAdmin = firebaseUser?.email?.toLowerCase() === ADMIN_EMAIL;
+        if (isFirebaseAdmin) {
+            userRole = "admin"; sessionUser = { name: "Admin", email: firebaseUser.email };
+            localStorage.setItem('pingvin_session_v14', JSON.stringify({ role: userRole, user: sessionUser }));
+            document.getElementById('adm-btn').style.display = "inline-block";
+            startApp();
+        } else if (d?.role === "user") {
+            userRole = "user"; sessionUser = d.user;
+            startApp();
+        } else {
+            localStorage.removeItem('pingvin_session_v14');
+            userRole = "guest"; sessionUser = null;
+            document.getElementById('app-nav').style.display = 'none';
+            document.getElementById('scr-auth').style.display = 'flex';
+            if (d?.role === "admin") document.getElementById('auth-err').innerText = "ADMIN SESIJA JE ISTEKLA. PRIJAVITE SE PONOVO.";
+        }
+    });
 };
+
+function isAdmin() {
+    return authReady && userRole === "admin" && auth.currentUser?.email?.toLowerCase() === ADMIN_EMAIL;
+}
+
+function requireAdmin() {
+    if (isAdmin()) return true;
+    if (!authReady) {
+        alert("PROVERA ADMIN SESIJE JE U TOKU. POKUŠAJTE PONOVO.");
+        return false;
+    }
+    alert("Access denied");
+    document.getElementById('app-nav').style.display = 'none';
+    navigateTo('cat');
+    return false;
+}
+
+function updateCartCount() {
+    document.getElementById('cart-num').innerText = cart.reduce((sum, item) => sum + item.quantity, 0);
+}
 
 async function doLogin() {
     const u = document.getElementById('l-u').value.trim(), p = document.getElementById('l-p').value.trim(), remember = document.getElementById('rem-check').checked;
     if (u.toLowerCase() === "admin") {
         try {
-            await auth.signInWithEmailAndPassword("porudzbine.zlatarapingvin@gmail.com", p);
+            await auth.signInWithEmailAndPassword(ADMIN_EMAIL, p);
             userRole = "admin"; sessionUser = { name: "Admin" };
             if (remember) localStorage.setItem('pingvin_session_v14', JSON.stringify({role: userRole, user: sessionUser}));
             document.getElementById('adm-btn').style.display = "inline-block";
@@ -64,13 +99,13 @@ function sync() {
     db.collection('products').onSnapshot(s => {
         products = s.docs.map(d => ({ fs_id: d.id, ...d.data() }));
         drawGrid();
-        if (userRole === "admin") { drawAdminList(); extractColors(); }
+        if (isAdmin()) { drawAdminList(); extractColors(); }
     });
     db.collection('announcements').orderBy('timestamp','desc').limit(1).onSnapshot(s => {
         if (!s.empty) { document.getElementById('ann-bar').style.display='block'; document.getElementById('ann-bar').innerText=s.docs[0].data().body; }
         else document.getElementById('ann-bar').style.display='none';
     });
-    if (userRole === "admin") loadReqs();
+    if (isAdmin()) loadReqs();
 }
 
 function extractColors() {
@@ -87,12 +122,14 @@ function renderColorChips() {
 }
 
 function toggleColor(c) {
+    if (!requireAdmin()) return;
     if(selectedColors.includes(c)) selectedColors = selectedColors.filter(x => x !== c);
     else selectedColors.push(c);
     renderColorChips();
 }
 
 function addNewColor() {
+    if (!requireAdmin()) return;
     const v = document.getElementById('new-color-text').value.trim().toUpperCase();
     if(!v) return;
     if(!selectedColors.includes(v)) selectedColors.push(v);
@@ -126,6 +163,7 @@ function openDet(id) {
             ${cols} ${pdf}
         </div>
         <p style="margin-top:40px; font-size:0.9rem; color:#555; padding:0 20px;">${p.description || "Nema dodatnog opisa."}</p>
+        <label class="quantity-control">KOLIČINA <input type="number" id="p-quantity" min="1" max="99" value="1"></label>
         <button onclick="addCart()" class="btn-add-cart-fixed">DODAJ U KORPU</button>
     `;
     navigateTo('det');
@@ -154,26 +192,39 @@ function viewPdf(productId) {
 
 function addCart() {
     const c = document.getElementById('p-sel-c') ? document.getElementById('p-sel-c').value : "Standard";
-    cart.push({...activeP, selC: c});
-    document.getElementById('cart-num').innerText = cart.length;
+    const quantity = Math.min(99, Math.max(1, parseInt(document.getElementById('p-quantity')?.value, 10) || 1));
+    const existing = cart.find(item => item.fs_id === activeP.fs_id && item.selC === c);
+    if (existing) existing.quantity = Math.min(99, existing.quantity + quantity);
+    else cart.push({...activeP, selC: c, quantity});
+    updateCartCount();
     alert("DODATO.");
 }
 
 function handleOpenCart() {
     let tot = 0;
     document.getElementById('c-list').innerHTML = cart.map((i, idx) => {
-        tot += i.price;
+        const quantity = Number(i.quantity) || 1;
+        const lineTotal = (Number(i.price) || 0) * quantity;
+        tot += lineTotal;
         return `<div class="cart-item">
             <img src="${i.image}" alt="${i.id}" loading="lazy" decoding="async">
-            <div style="flex:1;"><strong>${i.id}</strong><br><small>Boja: ${i.selC}</small></div>
-            <div>${i.price.toLocaleString()} din <span onclick="remC(${idx})" style="color:red; font-weight:800; cursor:pointer; margin-left:15px; font-size:1.5rem;">×</span></div>
+            <div style="flex:1;"><strong>${i.id}</strong><br><small>Boja: ${i.selC}</small><label class="cart-quantity">Količina <input type="number" min="1" max="99" value="${quantity}" onchange="changeCartQuantity(${idx}, this.value)"></label></div>
+            <div>${lineTotal.toLocaleString()} din <span onclick="remC(${idx})" style="color:red; font-weight:800; cursor:pointer; margin-left:15px; font-size:1.5rem;">×</span></div>
         </div>`;
     }).join('');
     document.getElementById('c-tot').innerText = tot.toLocaleString();
     document.getElementById('m-cart').style.display = 'flex';
 }
 
-function remC(i) { cart.splice(i,1); handleOpenCart(); document.getElementById('cart-num').innerText = cart.length; }
+function remC(i) { cart.splice(i,1); handleOpenCart(); updateCartCount(); }
+
+function changeCartQuantity(index, value) {
+    const quantity = Math.min(99, Math.max(1, parseInt(value, 10) || 1));
+    if (!cart[index]) return;
+    cart[index].quantity = quantity;
+    updateCartCount();
+    handleOpenCart();
+}
 
 function goToOrder() {
     if(cart.length===0) return;
@@ -186,11 +237,13 @@ function renderOrderSummary() {
     let total = 0;
     document.getElementById('order-summary').innerHTML = cart.map(item => {
         const price = Number(item.price) || 0;
-        total += price;
+        const quantity = Number(item.quantity) || 1;
+        const lineTotal = price * quantity;
+        total += lineTotal;
         return `<div class="order-summary-item">
             <img src="${item.image}" alt="${item.id}">
-            <div><strong>${item.id}</strong><small>Kolekcija: ${item.collection || '-'}<br>Tip: ${item.category || '-'}<br>Boja: ${item.selC}</small></div>
-            <strong>${price.toLocaleString()} din</strong>
+            <div><strong>${item.id}</strong><small>Kolekcija: ${item.collection || '-'}<br>Tip: ${item.category || '-'}<br>Boja: ${item.selC}<br>Količina: ${quantity}</small></div>
+            <strong>${lineTotal.toLocaleString()} din</strong>
         </div>`;
     }).join('') + `<div class="order-summary-total">UKUPNO: ${total.toLocaleString()} DIN</div>`;
 }
@@ -208,13 +261,15 @@ async function finishOrder() {
     if(!/^\d{4,10}$/.test(postal)) return alert("POŠTANSKI BROJ MOŽE SADRŽATI SAMO CIFRE.");
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return alert("UNESITE ISPRAVNU EMAIL ADRESU.");
     const invoiceRequested = document.getElementById('request-invoice').checked;
-    const total = cart.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    const total = cart.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
     const items = cart.map(i => [
         `- ${i.id}`,
         `  Kolekcija: ${i.collection || '-'}`,
         `  Tip nakita: ${i.category || '-'}`,
         `  Boja: ${i.selC || 'Standard'}`,
-        `  Cena: ${(Number(i.price) || 0).toLocaleString()} DIN`,
+        `  Količina: ${Number(i.quantity) || 1}`,
+        `  Cena po komadu: ${(Number(i.price) || 0).toLocaleString()} DIN`,
+        `  Ukupno stavke: ${((Number(i.price) || 0) * (Number(i.quantity) || 1)).toLocaleString()} DIN`,
         `  Opis: ${i.description || 'Nema opisa.'}`
     ].join('\n')).join('\n\n');
     const body = encodeURIComponent(`NARUDŽBINA:\nIme i prezime: ${n}\nTelefon: ${ph}\nEmail: ${email}\nAdresa: ${street}\nGrad: ${city}\nPoštanski broj: ${postal}\nNačin plaćanja: ${payment.value}\nFaktura: ${invoiceRequested ? 'DA' : 'NE'}\n\nPROIZVODI:\n${items}\n\nUKUPNO: ${total.toLocaleString()} DIN`);
@@ -236,6 +291,7 @@ function previewImage(input) {
 function previewPdfName(input) { if(input.files && input.files[0]) document.getElementById('pdf-label').innerText = input.files[0].name; }
 
 async function saveProduct() {
+    if (!requireAdmin()) return;
     const id=document.getElementById('a-id').value, pr=document.getElementById('a-pr').value, img=document.getElementById('a-img').files[0], pdf=document.getElementById('a-pdf').files[0];
     if(!id || !pr) return alert("OBAVEZNA POLJA!");
     const btn = document.getElementById('btn-sv'); btn.disabled = true;
@@ -266,6 +322,7 @@ function drawAdminList() {
 }
 
 function startEdit(id) {
+    if (!requireAdmin()) return;
     const p = products.find(x => x.fs_id === id); editId = id;
     document.getElementById('a-id').value = p.id; document.getElementById('a-pr').value = p.price; document.getElementById('a-ds').value = p.description;
     document.getElementById('a-ct').value = p.category; document.getElementById('a-cl').value = p.collection;
@@ -277,18 +334,21 @@ function startEdit(id) {
 }
 
 function resetAdminForm() {
+    if (!requireAdmin()) return;
     editId = null; selectedColors = [];
     document.getElementById('a-id').value = ""; document.getElementById('a-pr').value = ""; document.getElementById('a-ds').value = "";
-    document.getElementById('img-preview-box').innerHTML = "🖼";
+    document.getElementById('img-preview-box').innerHTML = "";
     document.getElementById('btn-sv').innerText = "Sačuvajte Proizvod";
     document.getElementById('btn-can').style.display = "none";
     renderColorChips();
 }
 
-async function delP(id) { if(confirm("OBRISATI?")) { await db.collection('products').doc(id).update({tajniKljuc:SECRET}); await db.collection('products').doc(id).delete(); } }
+async function delP(id) { if (!requireAdmin()) return; if(confirm("OBRISATI?")) { await db.collection('products').doc(id).update({tajniKljuc:SECRET}); await db.collection('products').doc(id).delete(); } }
 
 function loadReqs() {
+    if (!requireAdmin()) return;
     db.collection('users').where('status','==','pending').onSnapshot(s => {
+        if (!isAdmin()) return;
         document.getElementById('req-count').innerText = s.size;
         document.getElementById('req-list-ui').innerHTML = s.size === 0 ? '<p style="color:#999;">Nema novih zahteva.</p>' : s.docs.map(doc => `
             <div style="padding:15px; border:1px solid #eee; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; border-radius:15px;">
@@ -301,11 +361,12 @@ function loadReqs() {
     });
 }
 
-async function updU(id, s) { await db.collection('users').doc(id).update({ status: s, tajniKljuc: SECRET }); }
-async function delU(id) { if(confirm("OBRISATI ZAHTEV?")) { await db.collection('users').doc(id).update({ tajniKljuc: SECRET }); await db.collection('users').doc(id).delete(); } }
-async function handleClearAnn() { const snap = await db.collection('announcements').get(); snap.forEach(d => d.ref.delete()); }
+async function updU(id, s) { if (!requireAdmin()) return; await db.collection('users').doc(id).update({ status: s, tajniKljuc: SECRET }); }
+async function delU(id) { if (!requireAdmin()) return; if(confirm("OBRISATI ZAHTEV?")) { await db.collection('users').doc(id).update({ tajniKljuc: SECRET }); await db.collection('users').doc(id).delete(); } }
+async function handleClearAnn() { if (!requireAdmin()) return; const snap = await db.collection('announcements').get(); snap.forEach(d => d.ref.delete()); }
 
 async function setAnn() { 
+    if (!requireAdmin()) return;
     const b = document.getElementById('an-b').value;
     const snap = await db.collection('announcements').get();
     snap.forEach(d => d.ref.delete());
@@ -313,8 +374,8 @@ async function setAnn() {
     alert("OBJAVLJENO.");
 }
 
-function navigateTo(id) { document.querySelectorAll('section').forEach(s => s.style.display = 'none'); document.getElementById('scr-'+id).style.display = 'block'; }
-function doLogout() { localStorage.removeItem('pingvin_session_v14'); location.reload(); }
+function navigateTo(id) { if (id === 'adm' && !requireAdmin()) return; document.querySelectorAll('section').forEach(s => s.style.display = 'none'); document.getElementById('scr-'+id).style.display = 'block'; }
+function doLogout() { localStorage.removeItem('pingvin_session_v14'); auth.signOut().finally(() => location.reload()); }
 function handleHideM(id) { document.getElementById(id).style.display = 'none'; }
 function zoomIn(src) { document.getElementById('zoom-target').src = src; document.getElementById('zoom-overlay').style.display = 'flex'; }
 function swAuth(is) { document.getElementById('box-login').style.display = is ? 'none' : 'block'; document.getElementById('box-reg').style.display = is ? 'block' : 'none'; }
