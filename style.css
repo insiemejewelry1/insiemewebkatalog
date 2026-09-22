@@ -36,6 +36,7 @@ nav { padding: 15px 25px; border-bottom: 1px solid #EEE; position: sticky; top: 
 .main-container { max-width: 1200px; margin: auto; padding: 30px 20px; }
 .filter-row { display: flex; gap: 10px; margin-bottom: 30px; }
 .minimal-select { flex: 1; padding: 15px; border: 1px solid #DDD; background: white; font-size: 0.75rem; font-weight: 600; outline: none; border-radius: 5px; }
+.product-count { margin: -15px 0 25px; color: #777; font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; text-align: right; }
 
 .product-grid { display: grid; gap: 25px; grid-template-columns: 1fr; }
 @media (min-width: 768px) { .product-grid { grid-template-columns: repeat(2, 1fr); } }
