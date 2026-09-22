@@ -67,17 +67,18 @@
                     <option value="Ogrlice">OGRLICE</option><option value="Privesci">PRIVESCI</option><option value="Prstenje">PRSTENJE</option>
                 </select>
             </div>
+            <div id="product-count" class="product-count">BROJ PROIZVODA: 0</div>
             <div id="grid-ui" class="product-grid"></div>
         </div>
     </section>
 
     <section id="scr-det" class="screen" style="display:none;">
-        <div class="header-back" onclick="navigateTo('cat')">← DETALJI MODELA</div>
+        <div class="header-back" onclick="navigateBack()">← DETALJI MODELA</div>
         <div id="det-body" class="detail-view"></div>
     </section>
 
     <section id="scr-ord" class="screen" style="display:none;">
-        <div class="header-back" onclick="navigateTo('cat')">← DOSTAVA</div>
+        <div class="header-back" onclick="navigateBack()">← DOSTAVA</div>
         <div class="main-container" style="max-width:400px;">
             <input type="text" id="on" class="minimal-input" placeholder="IME I PREZIME">
             <input type="tel" id="op" class="minimal-input" placeholder="BROJ TELEFONA" inputmode="numeric" autocomplete="tel" maxlength="15" oninput="this.value=this.value.replace(/[^0-9]/g, '')">
@@ -102,7 +103,7 @@
     </section>
 
     <section id="scr-adm" class="screen" style="display:none;">
-        <div class="header-back" onclick="navigateTo('cat')">← ADMIN PANEL</div>
+        <div class="header-back" onclick="navigateBack()">← ADMIN PANEL</div>
         <div class="admin-main">
             
             <div class="admin-card">
