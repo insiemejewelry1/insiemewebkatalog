@@ -160,7 +160,10 @@ function drawGrid() {
 function openDet(id, addToHistory = true, recordViewed = true) {
     const p = products.find(x => x.fs_id === id); activeP = p;
     if (!p) return;
-    if (recordViewed && viewedProductHistory[viewedProductHistory.length - 1] !== id) viewedProductHistory.push(id);
+    if (recordViewed && viewedProductHistory[viewedProductHistory.length - 1] !== id) {
+        viewedProductHistory.push(id);
+        productHistoryIndex = viewedProductHistory.length - 1;
+    }
     const pdf = p.colorChart ? `<button onclick="viewPdf('${p.fs_id}')" class="btn-minimal" style="width:auto; padding:10px 20px; background:#f5f5f5; color:#000; margin-top:20px; border-radius:10px;">KATALOG BOJA</button>` : "";
     const cols = p.availableColors?.length ? `<div style="margin:30px 0; text-align:left;"><p style="font-size:0.7rem; font-weight:800; margin-bottom:10px; letter-spacing:1px;">ODABERITE BOJU</p><select id="p-sel-c" class="minimal-select" style="width:100%;">${p.availableColors.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>` : "";
     
@@ -382,6 +385,7 @@ async function setAnn() {
     if(b) await db.collection('announcements').add({ body: b, timestamp: Date.now(), tajniKljuc: SECRET });
     alert("OBJAVLJENO.");
 }
+let productHistoryIndex = -1;        
 
 function navigateTo(id, addToHistory = true, extraState = {}) {
     if (id === 'adm' && !requireAdmin()) return;
@@ -391,18 +395,27 @@ function navigateTo(id, addToHistory = true, extraState = {}) {
     if (addToHistory) history.pushState(state, '', '#' + id);
     else history.replaceState(state, '', '#' + id);
 }
+let cameFromPreviousProduct = false;
+
 function navigateBack() {
-    if (history.state?.appScreen === 'det' && viewedProductHistory.length > 1) {
-        viewedProductHistory.pop();
-        const previousProductId = viewedProductHistory[viewedProductHistory.length - 1];
-        if (products.some(product => product.fs_id === previousProductId)) {
-            openDet(previousProductId, false, false);
-            return;
+    if (history.state?.appScreen === 'det') {
+        if (!cameFromPreviousProduct && productHistoryIndex > 0) {
+            cameFromPreviousProduct = true;
+            productHistoryIndex--;
+            const previousProductId = viewedProductHistory[productHistoryIndex];
+            if (products.some(product => product.fs_id === previousProductId)) {
+                openDet(previousProductId, false, false);
+                return;
+            }
         }
+        cameFromPreviousProduct = false;
+        navigateTo('cat');
+        return;
     }
     if (history.state?.appScreen && history.state.appScreen !== 'cat') history.back();
     else navigateTo('cat');
 }
+
 window.addEventListener('popstate', event => {
     const id = event.state?.appScreen || 'cat';
     if (id === 'det' && event.state.productId) openDet(event.state.productId, false, false);
