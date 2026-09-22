@@ -14,7 +14,7 @@ const auth = firebase.auth();
 const SECRET = "ZlataraMojaSifra123";
 const ADMIN_EMAIL = "porudzbine.zlatarapingvin@gmail.com";
 
-let products = [], cart = [], selectedColors = [], globalColors = [], userRole = "guest", sessionUser = null, activeP = null, editId = null, authReady = false;
+let products = [], cart = [], selectedColors = [], globalColors = [], viewedProductHistory = [], userRole = "guest", sessionUser = null, activeP = null, editId = null, authReady = false;
 
 window.onload = () => {
     auth.onAuthStateChanged(firebaseUser => {
@@ -92,6 +92,7 @@ function startApp() {
     document.querySelectorAll('section').forEach(s => s.style.display = 'none');
     document.getElementById('scr-cat').style.display = 'block';
     document.getElementById('app-nav').style.display = 'block';
+    if (!history.state?.appScreen) history.replaceState({ appScreen: 'cat' }, '', '#cat');
     sync();
 }
 
@@ -140,9 +141,15 @@ function addNewColor() {
 
 function drawGrid() {
     const grid = document.getElementById('grid-ui'), coll = document.getElementById('f-coll').value, cat = document.getElementById('f-cat').value;
-    if (!coll) { grid.innerHTML = `<div style="text-align:center; padding:100px 0; color:#CCC;">ODABERITE KOLEKCIJU</div>`; return; }
+    const count = document.getElementById('product-count');
+    if (!coll) {
+        count.innerText = 'BROJ PROIZVODA: 0';
+        grid.innerHTML = `<div style="text-align:center; padding:100px 0; color:#CCC;">ODABERITE KOLEKCIJU</div>`;
+        return;
+    }
     let list = products.filter(p => p.collection === coll && (!cat || p.category === cat));
     list.sort((a,b) => a.id.toString().localeCompare(b.id.toString()));
+    count.innerText = `BROJ PROIZVODA: ${list.length}`;
     grid.innerHTML = list.map(p => `
         <div class="p-card" onclick="openDet('${p.fs_id}')">
             <img src="${p.image}" alt="${p.id}" loading="lazy" decoding="async">
@@ -150,8 +157,10 @@ function drawGrid() {
         </div>`).join('');
 }
 
-function openDet(id) {
+function openDet(id, addToHistory = true, recordViewed = true) {
     const p = products.find(x => x.fs_id === id); activeP = p;
+    if (!p) return;
+    if (recordViewed && viewedProductHistory[viewedProductHistory.length - 1] !== id) viewedProductHistory.push(id);
     const pdf = p.colorChart ? `<button onclick="viewPdf('${p.fs_id}')" class="btn-minimal" style="width:auto; padding:10px 20px; background:#f5f5f5; color:#000; margin-top:20px; border-radius:10px;">KATALOG BOJA</button>` : "";
     const cols = p.availableColors?.length ? `<div style="margin:30px 0; text-align:left;"><p style="font-size:0.7rem; font-weight:800; margin-bottom:10px; letter-spacing:1px;">ODABERITE BOJU</p><select id="p-sel-c" class="minimal-select" style="width:100%;">${p.availableColors.map(c=>`<option value="${c}">${c}</option>`).join('')}</select></div>` : "";
     
@@ -166,7 +175,7 @@ function openDet(id) {
         <label class="quantity-control">KOLIČINA <input type="number" id="p-quantity" min="1" max="99" value="1"></label>
         <button onclick="addCart()" class="btn-add-cart-fixed">DODAJ U KORPU</button>
     `;
-    navigateTo('det');
+    navigateTo('det', addToHistory, { productId: id });
     window.scrollTo(0,0);
 }
 
@@ -374,7 +383,31 @@ async function setAnn() {
     alert("OBJAVLJENO.");
 }
 
-function navigateTo(id) { if (id === 'adm' && !requireAdmin()) return; document.querySelectorAll('section').forEach(s => s.style.display = 'none'); document.getElementById('scr-'+id).style.display = 'block'; }
+function navigateTo(id, addToHistory = true, extraState = {}) {
+    if (id === 'adm' && !requireAdmin()) return;
+    document.querySelectorAll('section').forEach(s => s.style.display = 'none');
+    document.getElementById('scr-' + id).style.display = 'block';
+    const state = { appScreen: id, ...extraState };
+    if (addToHistory) history.pushState(state, '', '#' + id);
+    else history.replaceState(state, '', '#' + id);
+}
+function navigateBack() {
+    if (history.state?.appScreen === 'det' && viewedProductHistory.length > 1) {
+        viewedProductHistory.pop();
+        const previousProductId = viewedProductHistory[viewedProductHistory.length - 1];
+        if (products.some(product => product.fs_id === previousProductId)) {
+            openDet(previousProductId, false, false);
+            return;
+        }
+    }
+    if (history.state?.appScreen && history.state.appScreen !== 'cat') history.back();
+    else navigateTo('cat');
+}
+window.addEventListener('popstate', event => {
+    const id = event.state?.appScreen || 'cat';
+    if (id === 'det' && event.state.productId) openDet(event.state.productId, false, false);
+    else navigateTo(id, false);
+});
 function doLogout() { localStorage.removeItem('pingvin_session_v14'); auth.signOut().finally(() => location.reload()); }
 function handleHideM(id) { document.getElementById(id).style.display = 'none'; }
 function zoomIn(src) { document.getElementById('zoom-target').src = src; document.getElementById('zoom-overlay').style.display = 'flex'; }
